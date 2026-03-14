@@ -70,15 +70,36 @@ def a_star(maze, start, goal):
     return None  # No path found
 
 
-maze = [
-    [0, 0, 0, 0, 1],
-    [1, 1, 0, 1, 0],
-    [0, 0, 0, 0, 0],
-    [0, 1, 1, 1, 0],
-    [0, 0, 0, 0, 0],
-]
+# get_direction function, takes in variable, touple of touples the each position the object will be in as it moves. I need the direction of the first movement the object will make. up is 1, down 2, left 3, right 4 in python
+def get_direction(positions):
+    if len(positions) < 2:
+        return None  # Not enough positions to determine direction
 
-start = (0, 0)
-goal = (4, 4)
-path = a_star(maze, start, goal)
-print("Path:", path)
+    x1, y1 = positions[0]
+    x2, y2 = positions[1]
+
+    if x2 == x1 and y2 < y1:
+        return 1  # Up
+    elif x2 == x1 and y2 > y1:
+        return 2  # Down
+    elif y2 == y1 and x2 < x1:
+        return 3  # Left
+    elif y2 == y1 and x2 > x1:
+        return 4  # Right
+    else:
+        return None  # Diagonal or invalid movement
+
+
+if __name__ == "__main__":
+    maze = [
+        [0, 0, 0, 0, 1],
+        [1, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ]
+
+    start = (0, 0)
+    goal = (4, 4)
+    path = a_star(maze, start, goal)
+    print("Path:", get_direction(path))

@@ -1,3 +1,7 @@
+from math import floor
+from re import error
+
+
 class Ghost:
     def __new__(cls, number, max_ghosts, num_ghost):
         ghosts = {1: Blinky, 2: Inky, 3: Pinky, 4: Clyde}
@@ -10,6 +14,7 @@ class Ghost:
 class GhostBase:
     width = 25
     height = 25
+    facing = 0  # North, South, East, West
 
     def __init__(self, name, max_ghosts=4, num_ghost=1, **attributes):
         # Name and attributes unique to each ghost
@@ -31,12 +36,23 @@ class GhostBase:
         y = start_y
         return [x, y]
 
-    def get_move(self, pacman_pos=None, ghost_pos=None):
+    def get_pos(self):
+        # chatgpt: Generate a python match case 0-3 north south east west respectevely based on this return (self.position[0], floor(self.position[1] - 1))
+        match self.facing:
+            case 0:  # North
+                return (self.position[0], floor(self.position[1] - 1))
+            case 1:  # South
+                return (self.position[0], floor(self.position[1] + 1))
+            case 2:  # East
+                return (floor(self.position[0] + 1), self.position[1])
+            case 3:  # West
+                return (floor(self.position[0] - 1), self.position[1])
+            case _:  # invalid facing
+                raise ValueError(f"Invalid facing: {self.facing}")
+
+    def get_move(self, pacman_pos=None):
         # This function was inspired by chatgpt when I asked what would be a smart way to combine, my init functions into GhostBase
-        """
-        Default chase behavior (override in subclasses).
-        """
-        raise NotImplementedError("Each ghost must implement its own chase method.")
+        pass
 
 
 class Blinky(GhostBase):
@@ -44,7 +60,11 @@ class Blinky(GhostBase):
         # In all ghosts the idea to set "angry=False" was something I didn't know and was told to me in chatgpt
         super().__init__("Blinky", max_ghosts, num_ghost, angry=False)
 
-    def get_move(self, pacman_pos=None, ghost_pos=None):
+    def get_move(self, pacman_pos=None):
+        if pacman_pos is None:
+            raise ValueError("No Pacman Pos")
+        ghost_pos = self.get_pos()
+
         return "Chasing Pac-Man aggressively!"
 
 
