@@ -27,8 +27,8 @@ def get_neighbors(pos, maze):
     x, y = pos
     for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         nx, ny = x + dx, y + dy
-        if 0 <= nx < len(maze) and 0 <= ny < len(maze[0]):
-            if maze[nx][ny] != map.Tile.WALL:  # assuming 1 is wall
+        if 0 <= nx < len(maze[0]) and 0 <= ny < len(maze):
+            if maze[ny][nx] != map.Tile.WALL:
                 neighbors.append((nx, ny))
     return neighbors
 
@@ -67,18 +67,4 @@ def a_star(maze, start, goal):
             )
             heapq.heappush(open_heap, neighbor_node)
 
-    return None  # No path found
-
-
-maze = [
-    [0, 0, 0, 0, 1],
-    [1, 1, 0, 1, 0],
-    [0, 0, 0, 0, 0],
-    [0, 1, 1, 1, 0],
-    [0, 0, 0, 0, 0],
-]
-
-start = (0, 0)
-goal = (4, 4)
-path = a_star(maze, start, goal)
-print("Path:", path)
+    return None
