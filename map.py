@@ -65,6 +65,35 @@ class TileGridGenerator:
         "PLUS": 1,
     }
 
+    __SHAPES = {
+        "PLUS": [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        "VERTICAL": [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+        "HORIZONTAL": [[0, 0, 0], [1, 1, 1], [0, 0, 0]],
+        "CORNER_NE": [[0, 1, 0], [0, 1, 1], [0, 0, 0]],
+        "CORNER_NW": [[0, 1, 0], [1, 1, 0], [0, 0, 0]],
+        "CORNER_SE": [[0, 0, 0], [0, 1, 1], [0, 1, 0]],
+        "CORNER_SW": [[0, 0, 0], [1, 1, 0], [0, 1, 0]],
+        "EMPTY": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    }
+
+    __CONNECTIONS = {
+        "PLUS": {"N", "S", "E", "W"},
+        "VERTICAL": {"N", "S"},
+        "HORIZONTAL": {"E", "W"},
+        "CORNER_NE": {"N", "E"},
+        "CORNER_NW": {"N", "W"},
+        "CORNER_SE": {"S", "E"},
+        "CORNER_SW": {"S", "W"},
+        "EMPTY": set(),
+    }
+
+    __OPPOSITE = {
+        "N": "S",
+        "S": "N",
+        "E": "W",
+        "W": "E",
+    }
+
     def generate(self):
 
         grid = [[Tile.WALL for _ in range(self.width)] for _ in range(self.height)]
@@ -121,7 +150,9 @@ class TileGridGenerator:
         group_w = (self.width - 1) // 2
         group_h = (self.height - 1) // 2
 
-        groups = [[None for _ in range(group_w)] for _ in range(group_h)]
+        groups: list[list[str | None]] = [
+            [None for _ in range(group_w)] for _ in range(group_h)
+        ]
 
         for gy in range(group_h):
             for gx in range(group_w):
