@@ -10,25 +10,52 @@ class Tile(Enum):
     GHOST = 4
 
 
-MAP_WIDTH = 40
-MAP_HEIGHT = 20
+MAP_WIDTH = 28
+MAP_HEIGHT = 31
 
 
 class TileGridGenerator:
 
     def __init__(self, width=MAP_WIDTH, height=MAP_HEIGHT):
-        # if width % 2 == 0:
-        #     width -= 1
-        # if height % 2 == 0:
-        #     height -= 1
-
         self.width = width
         self.height = height
 
+    __SHAPES = {
+        "PLUS": [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        "VERTICAL": [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+        "HORIZONTAL": [[0, 0, 0], [1, 1, 1], [0, 0, 0]],
+        "CORNER_NE": [[0, 1, 0], [0, 1, 1], [0, 0, 0]],
+        "CORNER_NW": [[0, 1, 0], [1, 1, 0], [0, 0, 0]],
+        "CORNER_SE": [[0, 0, 0], [0, 1, 1], [0, 1, 0]],
+        "CORNER_SW": [[0, 0, 0], [1, 1, 0], [0, 1, 0]],
+        "EMPTY": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    }
+
+    __CONNECTIONS = {
+        "PLUS": {"N", "S", "E", "W"},
+        "VERTICAL": {"N", "S"},
+        "HORIZONTAL": {"E", "W"},
+        "CORNER_NE": {"N", "E"},
+        "CORNER_NW": {"N", "W"},
+        "CORNER_SE": {"S", "E"},
+        "CORNER_SW": {"S", "W"},
+        "EMPTY": set(),
+    }
+
+    __OPPOSITE = {
+        "N": "S",
+        "S": "N",
+        "E": "W",
+        "W": "E",
+    }
+
     def generate(self):
+
         grid = [[Tile.WALL for _ in range(self.width)] for _ in range(self.height)]
 
-        self._carve_maze(grid, 1, 1)
+        self._carve_maze(grid)
+
+        self._ensure_connectivity(grid)
 
         self._mirror(grid)
 
@@ -40,26 +67,142 @@ class TileGridGenerator:
 
         return grid
 
-    def _carve_maze(self, grid, x, y):
-        directions = [(2, 0), (-2, 0), (0, 2), (0, -2)]
-        random.shuffle(directions)
+    def _choose_shape(self, neighbors):
+
+        valid = []
+
+        for shape, exits in self.__CONNECTIONS.items():
+
+            if shape == "EMPTY":
+                continue
+
+            ok = True
+
+            for direction, neighbor_shape in neighbors.items():
+
+                if neighbor_shape is None:
+                    continue
+
+                neighbor_exits = self.__CONNECTIONS[neighbor_shape]
+
+                if self.__OPPOSITE[direction] in neighbor_exits:
+                    if direction not in exits:
+                        ok = False
+                        break
+
+            if ok:
+                valid.append(shape)
+
+        if valid:
+            return random.choice(valid)
+
+        return "EMPTY"
+
+    def _carve_maze(self, grid):
+
+        group_w = self.width // 3
+        group_h = self.height // 3
+
+        groups = [[None for _ in range(group_w)] for _ in range(group_h)]
+
+        for gy in range(group_h):
+            for gx in range(group_w):
+
+                neighbors = {
+                    "N": groups[gy - 1][gx] if gy > 0 else None,
+                    "W": groups[gy][gx - 1] if gx > 0 else None,
+                    "S": None,
+                    "E": None,
+                }
+
+                shape = self._choose_shape(neighbors)
+
+                groups[gy][gx] = shape
+
+                shape_map = self.__SHAPES[shape]
+
+                base_x = gx * 3
+                base_y = gy * 3
+
+                for y in range(3):
+                    for x in range(3):
+
+                        if shape_map[y][x] == 1:
+                            grid[base_y + y][base_x + x] = Tile.PATH
+
+    def _ensure_connectivity(self, grid):
+
+        visited = set()
+
+        start = None
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if grid[y][x] == Tile.PATH:
+                    start = (x, y)
+                    break
+            if start:
+                break
+
+        if start is None:
+            return
+
+        stack = [start]
+
+        while stack:
+
+            x, y = stack.pop()
+
+            if (x, y) in visited:
+                continue
+
+            visited.add((x, y))
+
+            for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+
+                nx = x + dx
+                ny = y + dy
+
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if grid[ny][nx] == Tile.PATH:
+                        stack.append((nx, ny))
+
+        for y in range(self.height):
+            for x in range(self.width):
+
+                if grid[y][x] != Tile.PATH:
+                    continue
+
+                if (x, y) in visited:
+                    continue
+
+                self._connect_to_region(grid, x, y, visited)
+                return self._ensure_connectivity(grid)
+
+    def _connect_to_region(self, grid, x, y, visited):
+
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
         for dx, dy in directions:
-            nx = x + dx
-            ny = y + dy
 
-            if not self._inside(nx, ny):
-                continue
+            cx = x
+            cy = y
 
-            if grid[ny][nx] != Tile.WALL:
-                continue
+            while True:
 
-            grid[y + dy // 2][x + dx // 2] = Tile.PATH
-            grid[ny][nx] = Tile.PATH
+                cx += dx
+                cy += dy
 
-            self._carve_maze(grid, nx, ny)
+                if not (0 <= cx < self.width and 0 <= cy < self.height):
+                    break
+
+                if (cx, cy) in visited:
+                    break
+
+                grid[cy][cx] = Tile.PATH
 
     def _mirror(self, grid):
+
         mid = self.width // 2
 
         for y in range(self.height):
@@ -67,6 +210,7 @@ class TileGridGenerator:
                 grid[y][self.width - 1 - x] = grid[y][x]
 
     def _place_ghost_box(self, grid):
+
         cx = self.width // 2
         cy = self.height // 2
 
@@ -75,8 +219,10 @@ class TileGridGenerator:
                 grid[y][x] = Tile.GHOST
 
     def _place_pellets(self, grid):
+
         for y in range(self.height):
             for x in range(self.width):
+
                 if grid[y][x] == Tile.PATH:
                     grid[y][x] = Tile.PELLET
 
@@ -92,9 +238,6 @@ class TileGridGenerator:
         for x, y in corners:
             if grid[y][x] == Tile.PELLET:
                 grid[y][x] = Tile.POWER
-
-    def _inside(self, x, y):
-        return 0 < x < self.width - 1 and 0 < y < self.height - 1
 
 
 if __name__ == "__main__":
