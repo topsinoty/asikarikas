@@ -90,6 +90,10 @@ def get_direction(positions):
         return None  # Diagonal or invalid movement
 
 
+def get_move(maze, start, goal):
+    return get_direction(a_star(maze, start, goal))
+
+
 if __name__ == "__main__":
     maze = [
         [0, 0, 0, 0, 1],
