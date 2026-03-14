@@ -17,8 +17,14 @@ MAP_HEIGHT = 31
 class TileGridGenerator:
 
     def __init__(self, width=MAP_WIDTH, height=MAP_HEIGHT):
-        self.width = width
-        self.height = height
+
+        def normalize(v):
+            if (v - 3) % 2 != 0:
+                v -= 1
+            return max(3, v)
+
+        self.width = normalize(width)
+        self.height = normalize(height)
 
     __SHAPES = {
         "PLUS": [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
@@ -49,6 +55,16 @@ class TileGridGenerator:
         "W": "E",
     }
 
+    __WEIGHTS = {
+        "HORIZONTAL": 4,
+        "VERTICAL": 4,
+        "CORNER_NE": 2,
+        "CORNER_NW": 2,
+        "CORNER_SE": 2,
+        "CORNER_SW": 2,
+        "PLUS": 1,
+    }
+
     def generate(self):
 
         grid = [[Tile.WALL for _ in range(self.width)] for _ in range(self.height)]
@@ -69,7 +85,7 @@ class TileGridGenerator:
 
     def _choose_shape(self, neighbors):
 
-        valid = []
+        valid: list[str] = []
 
         for shape, exits in self.__CONNECTIONS.items():
 
@@ -93,15 +109,17 @@ class TileGridGenerator:
             if ok:
                 valid.append(shape)
 
-        if valid:
-            return random.choice(valid)
+        if not valid:
+            return "EMPTY"
 
-        return "EMPTY"
+        weights = [self.__WEIGHTS.get(s, 1) for s in valid]
+
+        return random.choices(valid, weights=weights)[0]
 
     def _carve_maze(self, grid):
 
-        group_w = self.width // 3
-        group_h = self.height // 3
+        group_w = (self.width - 1) // 2
+        group_h = (self.height - 1) // 2
 
         groups = [[None for _ in range(group_w)] for _ in range(group_h)]
 
@@ -121,14 +139,18 @@ class TileGridGenerator:
 
                 shape_map = self.__SHAPES[shape]
 
-                base_x = gx * 3
-                base_y = gy * 3
+                base_x = gx * 2 + 1
+                base_y = gy * 2 + 1
 
                 for y in range(3):
                     for x in range(3):
 
-                        if shape_map[y][x] == 1:
-                            grid[base_y + y][base_x + x] = Tile.PATH
+                        px = base_x + x - 1
+                        py = base_y + y - 1
+
+                        if 0 <= px < self.width and 0 <= py < self.height:
+                            if shape_map[y][x] == 1:
+                                grid[py][px] = Tile.PATH
 
     def _ensure_connectivity(self, grid):
 
@@ -181,12 +203,9 @@ class TileGridGenerator:
 
     def _connect_to_region(self, grid, x, y, visited):
 
-        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
 
-        for dx, dy in directions:
-
-            cx = x
-            cy = y
+            cx, cy = x, y
 
             while True:
 
@@ -241,6 +260,7 @@ class TileGridGenerator:
 
 
 if __name__ == "__main__":
+
     gen = TileGridGenerator()
 
     grid = gen.generate()
@@ -253,7 +273,7 @@ if __name__ == "__main__":
                     Tile.PELLET: " * ",
                     Tile.POWER: " o ",
                     Tile.GHOST: " g ",
-                }.get(cell, " ")
+                }.get(cell, "   ")
                 for cell in row
             )
         )
